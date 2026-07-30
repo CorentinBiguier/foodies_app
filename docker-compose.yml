@@ -10,9 +10,9 @@ services:
     image: postgres:17
     container_name: postgres
     environment:
-      POSTGRES_USER: foodies
-      POSTGRES_PASSWORD: foodies
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -21,7 +21,7 @@ services:
     networks:
       - foodies-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U foodies"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,9 +50,9 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: user_service_db
-      DB_USER: foodies
-      DB_PASSWORD: foodies
+      DB_NAME: ${USER_SERVICE_DB_NAME}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
