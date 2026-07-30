@@ -42,6 +42,8 @@ class ExampleControllerIT {
     @Test
     void findById_whenMissing_returns404() throws Exception {
         mockMvc.perform(get("/api/examples/{id}", 9999))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").exists());
     }
 }
