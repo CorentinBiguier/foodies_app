@@ -37,10 +37,38 @@ mono-repo grossira (prévu au Palier 1).
 
 ## Conventions
 
-- Pas encore de convention figée : à documenter au fur et à mesure que
-  `services/_template` et le premier service (`user-service`) prennent forme.
-- Mettre à jour cette section dès que des règles de nommage, structure de
-  package ou style de code se stabilisent.
+Architecture de package par service (établie dans `services/_template`,
+à répliquer telle quelle pour chaque nouveau service) :
+
+```
+com.foodies.<service>/
+  controller/   # REST controllers + @RestControllerAdvice pour les erreurs
+  service/      # interfaces métier
+  service/impl/ # implémentations (XxxServiceImpl)
+  modele/       # DTOs, sous forme de record Java (entrée/sortie API)
+  entite/       # entités JPA
+  repository/   # interfaces Spring Data JPA
+```
+
+- Le controller ne dépend que de l'interface `service`, jamais de l'impl ni
+  du repository directement.
+- Les DTOs (`modele`) sont des `record` immuables ; on distingue déjà requête
+  de création (ex. `CreateXxxRequest`) et DTO de réponse (ex. `XxxDto`) quand
+  ça a du sens.
+- Persistance : H2 en mémoire pour `_template` (suffisant pour dev/tests) ;
+  les services réels brancheront une base persistante dès qu'ils en auront
+  besoin (à partir du Palier 2).
+
+### Tests
+
+- **Unitaires** (`*Test.java`, ex. `ExampleServiceImplTest`) : ciblent la
+  couche `service`, avec Mockito pour mocker le repository. Exécutés par
+  Surefire (`mvn test`), sans contexte Spring.
+- **Intégration** (`*IT.java`, ex. `ExampleControllerIT`) : ciblent la couche
+  `controller`, avec `@SpringBootTest` + `MockMvc` sur le contexte complet
+  (vraie base H2, vrai service, vrai repository). Exécutés par Failsafe
+  (`mvn verify`), pas par `mvn test` (convention de nommage Maven standard,
+  aucune config d'exclusion nécessaire).
 
 ## Notes de travail avec Claude Code
 
