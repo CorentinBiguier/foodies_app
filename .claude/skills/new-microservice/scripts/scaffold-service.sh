@@ -13,6 +13,7 @@
 #   - updates pom.xml (artifactId/name) and application.yml (spring.application.name)
 #   - appends a new service block to the root docker-compose.yml on the shared
 #     foodies-network, with the next free host port
+#   - registers the new module in the root pom.xml reactor (IDE/Maven discovery)
 #   - generates a starter README.md for the service
 #
 # What it deliberately does NOT do (left to judgment, see SKILL.md):
@@ -40,6 +41,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 TEMPLATE_DIR="$REPO_ROOT/services/_template"
 TARGET_DIR="$REPO_ROOT/services/$SERVICE_NAME"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
+ROOT_POM="$REPO_ROOT/pom.xml"
 
 if [[ ! -d "$TEMPLATE_DIR" ]]; then
   echo "Error: template not found at $TEMPLATE_DIR" >&2
@@ -128,7 +130,12 @@ cat >> "$COMPOSE_FILE" <<EOF
       start_period: 20s
 EOF
 
-# 7. Starter README for the service.
+# 7. Register the new module in the root aggregator pom.xml, if present.
+if [[ -f "$ROOT_POM" ]] && ! grep -q "<module>services/${SERVICE_NAME}</module>" "$ROOT_POM"; then
+  sed -i "s|</modules>|    <module>services/${SERVICE_NAME}</module>\n    </modules>|" "$ROOT_POM"
+fi
+
+# 8. Starter README for the service.
 PLURAL_GUESS="${DOMAIN_CAMEL}s"
 cat > "$TARGET_DIR/README.md" <<EOF
 # ${SERVICE_NAME}

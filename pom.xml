@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.foodies</groupId>
+    <artifactId>foodies-app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>foodies-app</name>
+    <description>
+        Agrégateur Maven du mono-repo, pour que l'IDE (et un build reactor
+        `mvn validate` à la racine) découvre automatiquement tous les
+        services. Ce n'est PAS le parent Maven des services : chacun garde
+        `spring-boot-starter-parent` comme parent et reste buildable/
+        déployable indépendamment (voir CLAUDE.md). N'ajoute ici que la
+        liste des modules, jamais de dependencyManagement ni de config
+        partagée.
+    </description>
+
+    <modules>
+        <module>services/_template</module>
+        <module>services/user-service</module>
+    </modules>
+</project>

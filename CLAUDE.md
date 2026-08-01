@@ -22,11 +22,22 @@ services/
   scraper-service/
   gateway/
 docker-compose.yml
+pom.xml             # agrégateur Maven (voir ci-dessous)
 ```
 
 Chaque service est un module Maven indépendant avec son propre `Dockerfile` et
 son propre healthcheck. Un `CLAUDE.md` pourra être ajouté par service quand le
 mono-repo grossira (prévu au Palier 1).
+
+Le `pom.xml` à la racine du repo est un agrégateur pur (`packaging: pom` +
+`<modules>`), pas le parent Maven des services — chaque service garde
+`spring-boot-starter-parent` comme parent et reste indépendant en
+build/déploiement. Son seul rôle est de permettre à l'IDE (et à un
+`mvn validate` lancé depuis la racine) de découvrir tous les services
+automatiquement, sans avoir à importer chaque `pom.xml` de service à la main.
+Le skill `new-microservice` y ajoute automatiquement le nouveau `<module>` à
+chaque scaffold — ne jamais y ajouter de `dependencyManagement` ou de config
+partagée, ça casserait l'indépendance des services.
 
 ## Stack technique
 
