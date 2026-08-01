@@ -70,6 +70,7 @@ com.foodies.<service>/
   modele/       # DTOs, sous forme de record Java (entrée/sortie API)
   entite/       # entités JPA
   repository/   # interfaces Spring Data JPA
+  config/       # beans de configuration Spring (ex. OpenAPI/Swagger)
 ```
 
 - Le controller ne dépend que de l'interface `service`, jamais de l'impl ni
@@ -93,6 +94,12 @@ com.foodies.<service>/
     `src/main/resources/db/changelog/`, un fichier par changeset numéroté
     (`001-xxx.yaml`, `002-xxx.yaml`...), inclus depuis le master.
 - API REST : erreurs au format `{ "error": string, "details": string }`, codes HTTP standards (400 validation, 404 introuvable, 409 conflit)
+- Documentation API : springdoc-openapi expose une UI Swagger sur
+  `/swagger-ui.html` (redirige vers `/swagger-ui/index.html`) et le JSON
+  OpenAPI sur `/v3/api-docs`, pour chaque service (établi dans `_template`,
+  présent par défaut dans tout nouveau service scaffoldé). Le titre affiché
+  correspond à `spring.application.name` (`config/OpenApiConfig.java`), pas
+  de valeur codée en dur à maintenir manuellement.
 - Tests d'intégration avec Testcontainers pour tout ce qui touche la DB, pas de H2
 - Commits : `type(scope): message` (ex: `feat(recipe-service): add ingredient validation`)
 
