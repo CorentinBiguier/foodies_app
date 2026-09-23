@@ -9,7 +9,8 @@ notes du projet) pour le détail fonctionnel et pédagogique de chaque étape.
 
 ## État actuel
 
-Palier 0 (setup) en cours. Aucun service n'existe encore.
+Palier 2 en cours. `user-service` existe (Postgres + Liquibase, Swagger,
+auth JWT basique) ; `services/_template` sert de gabarit pour les suivants.
 
 ## Structure cible du mono-repo
 
@@ -100,12 +101,41 @@ com.foodies.<service>/
   présent par défaut dans tout nouveau service scaffoldé). Le titre affiché
   correspond à `spring.application.name` (`config/OpenApiConfig.java`), pas
   de valeur codée en dur à maintenir manuellement.
+- Authentification : JWT stateless via Spring Security
+  (`spring-boot-starter-security` + `io.jsonwebtoken:jjwt-api`/`jjwt-impl`/
+  `jjwt-jackson`), établi avec `user-service`, à répliquer pour tout service
+  suivant qui expose une API protégée :
+  - `POST /api/auth/register` et `POST /api/auth/login` (`AuthController` /
+    `AuthService`) émettent un token ; toutes les autres routes sont
+    protégées par défaut (`config/SecurityConfig.java`), sauf
+    `/api/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**`, `/actuator/health`.
+  - `config/JwtAuthenticationFilter.java` lit l'en-tête
+    `Authorization: Bearer <token>`, valide la signature via `JwtService`
+    (`service/`) et peuple manuellement le `SecurityContextHolder` — pas de
+    `UserDetailsService`/`AuthenticationManager`, volontairement minimal
+    (pas de rôles/permissions pour l'instant, juste authentifié/non
+    authentifié). `UserDetailsServiceAutoConfiguration` exclue dans
+    `@SpringBootApplication` pour ne pas générer un utilisateur/mot de passe
+    par défaut inutilisé.
+  - Mots de passe hashés avec `BCryptPasswordEncoder`, jamais stockés ni
+    loggés en clair.
+  - Expiration du token configurable via `JWT_EXPIRATION_MS`
+    (`0` = pas d'expiration, valeur par défaut actuelle) ; secret via
+    `JWT_SECRET` (chaîne Base64 aléatoire ≥32 octets, générée à la main,
+    jamais commitée, pas de valeur par défaut dans `application.yml` —
+    l'appli refuse de démarrer si absente).
+  - Erreurs 401/409 suivent le même format `{error, details}` via
+    `GlobalExceptionHandler` que le reste de l'API.
+  - Les tests `@SpringBootTest` ont besoin d'un `jwt.secret` (pas de défaut
+    en prod) : `src/test/resources/application.yml` fournit une valeur de
+    test dédiée, jamais réutilisée hors tests.
 - Tests d'intégration avec Testcontainers pour tout ce qui touche la DB, pas de H2
 - Commits : `type(scope): message` (ex: `feat(recipe-service): add ingredient validation`)
 
 ## Ne jamais
 - Committer un `.env`
 - Toucher aux changelogs Liquibase déjà présents dans `src/main/resources/db/changelog` (créer un nouveau changeset numéroté à la place)
+- Committer un vrai `JWT_SECRET`, ou logguer un mot de passe en clair
 
 ### Tests
 

@@ -1,7 +1,6 @@
 package com.foodies.user.service;
 
 import com.foodies.user.entite.UserEntity;
-import com.foodies.user.modele.CreateUserRequest;
 import com.foodies.user.modele.UserDto;
 import com.foodies.user.repository.UserRepository;
 import com.foodies.user.service.impl.UserServiceImpl;
@@ -17,8 +16,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,12 +33,13 @@ class UserServiceImplTest {
 
     @Test
     void findAll_returnsAllUsersAsDto() {
-        when(userRepository.findAll()).thenReturn(List.of(new UserEntity("Alice")));
+        when(userRepository.findAll()).thenReturn(List.of(new UserEntity("Alice", "alice@test.com", "hash")));
 
         List<UserDto> result = userService.findAll();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).name()).isEqualTo("Alice");
+        assertThat(result.get(0).email()).isEqualTo("alice@test.com");
     }
 
     @Test
@@ -50,15 +48,5 @@ class UserServiceImplTest {
 
         assertThatThrownBy(() -> userService.findById(42L))
                 .isInstanceOf(NoSuchElementException.class);
-    }
-
-    @Test
-    void create_savesEntityAndReturnsDto() {
-        when(userRepository.save(any(UserEntity.class))).thenReturn(new UserEntity("Bob"));
-
-        UserDto result = userService.create(new CreateUserRequest("Bob"));
-
-        assertThat(result.name()).isEqualTo("Bob");
-        verify(userRepository).save(any(UserEntity.class));
     }
 }

@@ -1,7 +1,6 @@
 package com.foodies.user.service.impl;
 
 import com.foodies.user.entite.UserEntity;
-import com.foodies.user.modele.CreateUserRequest;
 import com.foodies.user.modele.UserDto;
 import com.foodies.user.repository.UserRepository;
 import com.foodies.user.service.UserService;
@@ -33,13 +32,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NoSuchElementException("User %d introuvable".formatted(id)));
     }
 
-    @Override
-    public UserDto create(CreateUserRequest request) {
-        UserEntity saved = userRepository.save(new UserEntity(request.name()));
-        return toDto(saved);
-    }
-
     private UserDto toDto(UserEntity entity) {
-        return new UserDto(entity.getId(), entity.getName());
+        return new UserDto(entity.getId(), entity.getName(), entity.getEmail());
     }
 }

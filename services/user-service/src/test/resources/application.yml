@@ -1,0 +1,3 @@
+jwt:
+  secret: dGVzdC1vbmx5LXNlY3JldC1uZXZlci11c2UtaW4tcHJvZC0xMjM0NTY=
+  expiration-ms: 0
