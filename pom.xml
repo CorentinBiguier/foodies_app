@@ -22,5 +22,6 @@
     <modules>
         <module>services/_template</module>
         <module>services/user-service</module>
+        <module>services/recipe-service</module>
     </modules>
 </project>

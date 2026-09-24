@@ -6,3 +6,6 @@
 
 SELECT 'CREATE DATABASE user_service_db'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'user_service_db')\gexec
+
+SELECT 'CREATE DATABASE recipe_service_db'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'recipe_service_db')\gexec

@@ -51,4 +51,21 @@ class UserControllerIT {
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.details").exists());
     }
+
+    @Test
+    @WithMockUser(username = "bob@usercontrollerit.test")
+    void me_whenAuthenticated_returnsCallersUser() throws Exception {
+        userRepository.save(new UserEntity("Bob", "bob@usercontrollerit.test", "hash"));
+
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("bob@usercontrollerit.test"));
+    }
+
+    @Test
+    void me_whenNotAuthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+    }
 }

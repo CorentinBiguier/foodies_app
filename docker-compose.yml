@@ -66,3 +66,32 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  recipe-service:
+    build:
+      context: ./services/recipe-service
+    container_name: recipe-service
+    ports:
+      - "8082:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${RECIPE_SERVICE_DB_NAME}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      USER_SERVICE_URL: http://user-service:8080
+      USER_SERVICE_TIMEOUT_MS: ${USER_SERVICE_TIMEOUT_MS}
+      USER_SERVICE_RETRY_MAX_ATTEMPTS: ${USER_SERVICE_RETRY_MAX_ATTEMPTS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    networks:
+      - foodies-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

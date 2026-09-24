@@ -32,6 +32,13 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NoSuchElementException("User %d introuvable".formatted(id)));
     }
 
+    @Override
+    public UserDto findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .map(this::toDto)
+                .orElseThrow(() -> new NoSuchElementException("Utilisateur %s introuvable".formatted(email)));
+    }
+
     private UserDto toDto(UserEntity entity) {
         return new UserDto(entity.getId(), entity.getName(), entity.getEmail());
     }

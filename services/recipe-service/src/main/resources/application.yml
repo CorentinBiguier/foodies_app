@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: recipe-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:recipe_service_db}
+    username: ${DB_USER:foodies}
+    password: ${DB_PASSWORD:foodies}
+  jpa:
+    hibernate:
+      # Liquibase possède le schéma ; Hibernate se contente de vérifier qu'il correspond aux entités.
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+user-service:
+  base-url: ${USER_SERVICE_URL:http://localhost:8081}
+  timeout-ms: ${USER_SERVICE_TIMEOUT_MS:5000}
+  retry:
+    max-attempts: ${USER_SERVICE_RETRY_MAX_ATTEMPTS:3}

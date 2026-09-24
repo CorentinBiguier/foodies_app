@@ -9,8 +9,10 @@ notes du projet) pour le détail fonctionnel et pédagogique de chaque étape.
 
 ## État actuel
 
-Palier 2 en cours. `user-service` existe (Postgres + Liquibase, Swagger,
-auth JWT basique) ; `services/_template` sert de gabarit pour les suivants.
+Palier 3 en cours. `user-service` (Postgres + Liquibase, Swagger, auth JWT
+basique) et `recipe-service` (CRUD recette, lien REST vers `user-service`
+avec timeout/retry) existent ; `services/_template` sert de gabarit pour les
+suivants.
 
 ## Structure cible du mono-repo
 
@@ -72,6 +74,9 @@ com.foodies.<service>/
   entite/       # entités JPA
   repository/   # interfaces Spring Data JPA
   config/       # beans de configuration Spring (ex. OpenAPI/Swagger)
+  client/       # client HTTP vers un autre micro-service (optionnel, voir
+                # "Communication inter-services" — tous les services n'en
+                # ont pas besoin)
 ```
 
 - Le controller ne dépend que de l'interface `service`, jamais de l'impl ni
@@ -129,6 +134,41 @@ com.foodies.<service>/
   - Les tests `@SpringBootTest` ont besoin d'un `jwt.secret` (pas de défaut
     en prod) : `src/test/resources/application.yml` fournit une valeur de
     test dédiée, jamais réutilisée hors tests.
+- Communication inter-services : établi avec `recipe-service` appelant
+  `user-service` (résolution de l'auteur d'une recette), à répliquer pour
+  tout futur appel service-à-service :
+  - Client HTTP synchrone via `RestClient` (pas `RestTemplate`, en fin de
+    vie, ni `WebClient`, pile réactive superflue pour un service Spring MVC
+    classique), package `client/` (`XxxClient` interface + `client/impl/`).
+  - Timeout : `JdkClientHttpRequestFactory` (`java.net.http.HttpClient` du
+    JDK), connect ET read timeout en `Duration`, jamais un cast en millis.
+  - Retry : `spring-retry` + `spring-boot-starter-aop` (indispensable —
+    `@Retryable` est tissé par proxy AOP, silencieusement no-op sans cette
+    dépendance), `@EnableRetry` sur la classe `@SpringBootApplication`.
+    Retry uniquement sur les erreurs de connectivité/5xx transitoires
+    (`ResourceAccessException`, `HttpServerErrorException`) — **jamais** sur
+    un 401 : un mauvais token ne devient pas valide en réessayant. Dès
+    qu'une méthode a au moins un `@Recover`, Spring Retry route **toute**
+    exception qu'elle lève vers la recherche d'une méthode `@Recover`
+    correspondante, même hors de `retryFor` — prévoir un `@Recover`
+    générique (`RuntimeException`) qui relance tel quel, sinon les
+    exceptions non retryable ressortent en `ExhaustedRetryException`
+    trompeur au lieu de se propager normalement.
+  - Config externalisée en `@Value` (même style que `jwt.*`) :
+    `<service-appelé>.base-url`/`timeout-ms`/`retry.max-attempts`, avec
+    variables d'env dédiées (`USER_SERVICE_TIMEOUT_MS`,
+    `USER_SERVICE_RETRY_MAX_ATTEMPTS`) ; l'URL elle-même est codée en dur
+    dans `docker-compose.yml` (nom du conteneur + port interne, ex.
+    `http://user-service:8080`) plutôt que mise en `.env`, ce n'est ni un
+    secret ni une valeur qui varie par environnement compose.
+  - Règle de conception : **dénormaliser à la création, ne jamais
+    re-résoudre à la lecture**. Une référence vers une autre entité de
+    service (ex. auteur d'une recette) se snapshot une fois (id + nom) au
+    moment de l'écriture, jamais re-fetchée sur les lectures — sinon les
+    lectures deviennent dépendantes de la disponibilité d'un autre service.
+    Compromis assumé : l'info dénormalisée peut devenir périmée (ex. un nom
+    d'utilisateur changé après coup) jusqu'à la prochaine écriture qui
+    déclenche un nouvel appel.
 - Tests d'intégration avec Testcontainers pour tout ce qui touche la DB, pas de H2
 - Commits : `type(scope): message` (ex: `feat(recipe-service): add ingredient validation`)
 

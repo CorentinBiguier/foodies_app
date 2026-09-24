@@ -29,7 +29,13 @@ class JwtServiceImplTest {
     void extractSubject_whenTokenTampered_throws() {
         JwtService jwtService = new JwtServiceImpl(SECRET, 0);
         String token = jwtService.generateToken("alice@test.com");
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+        // Flip a character in the middle of the token rather than the very last one:
+        // the last base64url character of the signature segment can carry unused
+        // padding bits, so tampering only that character can sometimes decode to
+        // the same signature bytes and flakily fail to raise.
+        int i = token.length() / 2;
+        char flipped = token.charAt(i) == 'A' ? 'B' : 'A';
+        String tampered = token.substring(0, i) + flipped + token.substring(i + 1);
 
         assertThatThrownBy(() -> jwtService.extractSubject(tampered))
                 .isInstanceOf(JwtException.class);

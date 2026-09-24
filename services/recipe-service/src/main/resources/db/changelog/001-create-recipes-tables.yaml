@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-recipes-tables
+      author: foodies
+      changes:
+        - createTable:
+            tableName: recipes
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: serving
+                  type: INTEGER
+              - column:
+                  name: preparation_time
+                  type: INTEGER
+              - column:
+                  name: preparation_step
+                  type: TEXT
+              - column:
+                  name: cooking_step
+                  type: TEXT
+              - column:
+                  name: cooking_time
+                  type: INTEGER
+              - column:
+                  name: side_dish
+                  type: VARCHAR(255)
+              - column:
+                  name: author_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: recipe_ingredients
+            columns:
+              - column:
+                  name: recipe_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recipe_ingredients_recipe
+                    references: recipes(id)
+              - column:
+                  name: ingredient
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: recipe_tags
+            columns:
+              - column:
+                  name: recipe_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recipe_tags_recipe
+                    references: recipes(id)
+              - column:
+                  name: tag
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false

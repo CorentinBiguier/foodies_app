@@ -49,4 +49,22 @@ class UserServiceImplTest {
         assertThatThrownBy(() -> userService.findById(42L))
                 .isInstanceOf(NoSuchElementException.class);
     }
+
+    @Test
+    void findByEmail_returnsMatchingUserAsDto() {
+        when(userRepository.findByEmail("alice@test.com"))
+                .thenReturn(Optional.of(new UserEntity("Alice", "alice@test.com", "hash")));
+
+        UserDto result = userService.findByEmail("alice@test.com");
+
+        assertThat(result.email()).isEqualTo("alice@test.com");
+    }
+
+    @Test
+    void findByEmail_whenNotFound_throwsNoSuchElementException() {
+        when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.findByEmail("ghost@test.com"))
+                .isInstanceOf(NoSuchElementException.class);
+    }
 }
