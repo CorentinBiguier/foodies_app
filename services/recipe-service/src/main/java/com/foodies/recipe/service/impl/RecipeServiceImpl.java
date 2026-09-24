@@ -12,6 +12,7 @@ import com.foodies.recipe.service.ForbiddenException;
 import com.foodies.recipe.service.RecipeService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -65,14 +66,7 @@ public class RecipeServiceImpl implements RecipeService {
 
     @Override
     public RecipeDto update(Long id, RecipeRequest request, String authorizationHeader) {
-        UserDto caller = userServiceClient.getCurrentUser(authorizationHeader);
-
-        RecipeEntity entity = recipeRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Recette %d introuvable".formatted(id)));
-
-        if (!entity.getAuthorId().equals(caller.id())) {
-            throw new ForbiddenException("Seul l'auteur de la recette peut la modifier");
-        }
+        RecipeEntity entity = loadForOwner(id, authorizationHeader);
 
         entity.setTitle(request.title());
         entity.setIngredients(request.ingredients());
@@ -83,9 +77,51 @@ public class RecipeServiceImpl implements RecipeService {
         entity.setCookingTime(request.cookingTime());
         entity.setSideDish(request.sideDish());
         entity.setTags(request.tags());
-        entity.setAuthorName(caller.name());
 
         return toDto(recipeRepository.save(entity));
+    }
+
+    @Override
+    public RecipeDto addTag(Long id, Tag tag, String authorizationHeader) {
+        RecipeEntity entity = loadForOwner(id, authorizationHeader);
+
+        List<Tag> tags = new ArrayList<>(entity.getTags());
+        if (!tags.contains(tag)) {
+            tags.add(tag);
+            entity.setTags(tags);
+        }
+
+        return toDto(recipeRepository.save(entity));
+    }
+
+    @Override
+    public RecipeDto removeTag(Long id, Tag tag, String authorizationHeader) {
+        RecipeEntity entity = loadForOwner(id, authorizationHeader);
+
+        List<Tag> tags = new ArrayList<>(entity.getTags());
+        tags.remove(tag);
+        entity.setTags(tags);
+
+        return toDto(recipeRepository.save(entity));
+    }
+
+    /**
+     * Resolves the caller via user-service, loads the recipe, and verifies
+     * the caller is its author. Also refreshes the denormalized authorName
+     * snapshot, since resolving the caller already costs a call regardless.
+     */
+    private RecipeEntity loadForOwner(Long id, String authorizationHeader) {
+        UserDto caller = userServiceClient.getCurrentUser(authorizationHeader);
+
+        RecipeEntity entity = recipeRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Recette %d introuvable".formatted(id)));
+
+        if (!entity.getAuthorId().equals(caller.id())) {
+            throw new ForbiddenException("Seul l'auteur de la recette peut la modifier");
+        }
+
+        entity.setAuthorName(caller.name());
+        return entity;
     }
 
     @Override

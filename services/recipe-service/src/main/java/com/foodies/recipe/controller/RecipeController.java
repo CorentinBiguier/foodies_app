@@ -9,6 +9,7 @@ import com.foodies.recipe.service.RecipeService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +60,22 @@ public class RecipeController {
                              @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
         requireAuthorizationHeader(authorizationHeader);
         return recipeService.update(id, request, authorizationHeader);
+    }
+
+    @PostMapping("/{id}/tags/{tag}")
+    public RecipeDto addTag(@PathVariable Long id,
+                             @PathVariable Tag tag,
+                             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        requireAuthorizationHeader(authorizationHeader);
+        return recipeService.addTag(id, tag, authorizationHeader);
+    }
+
+    @DeleteMapping("/{id}/tags/{tag}")
+    public RecipeDto removeTag(@PathVariable Long id,
+                                @PathVariable Tag tag,
+                                @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        requireAuthorizationHeader(authorizationHeader);
+        return recipeService.removeTag(id, tag, authorizationHeader);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

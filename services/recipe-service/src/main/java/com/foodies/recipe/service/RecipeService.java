@@ -17,4 +17,8 @@ public interface RecipeService {
     RecipeDto update(Long id, RecipeRequest request, String authorizationHeader);
 
     RecipeDto createFromAdoc(String adocContent, List<Tag> tags, String authorizationHeader);
+
+    RecipeDto addTag(Long id, Tag tag, String authorizationHeader);
+
+    RecipeDto removeTag(Long id, Tag tag, String authorizationHeader);
 }

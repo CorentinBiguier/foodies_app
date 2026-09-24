@@ -19,9 +19,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -168,6 +170,86 @@ class RecipeControllerIT {
                         .content(objectMapper.writeValueAsString(updated)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Curry de légumes (v2)"));
+    }
+
+    @Test
+    void addTag_byAuthor_returns200WithUpdatedTags() throws Exception {
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+
+        String created = mockMvc.perform(post("/api/recipes")
+                        .header("Authorization", "Bearer token-alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleRequest())))
+                .andReturn().getResponse().getContentAsString();
+        Long id = objectMapper.readTree(created).get("id").asLong();
+
+        mockMvc.perform(post("/api/recipes/{id}/tags/{tag}", id, "AIR_FRYER")
+                        .header("Authorization", "Bearer token-alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags", containsInAnyOrder("VEGETARIEN", "AIR_FRYER")));
+    }
+
+    @Test
+    void addTag_byNonAuthor_returns403() throws Exception {
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+
+        String created = mockMvc.perform(post("/api/recipes")
+                        .header("Authorization", "Bearer token-alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleRequest())))
+                .andReturn().getResponse().getContentAsString();
+        Long id = objectMapper.readTree(created).get("id").asLong();
+
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(2L, "Bob", "bob@test.com"));
+
+        mockMvc.perform(post("/api/recipes/{id}/tags/{tag}", id, "AIR_FRYER")
+                        .header("Authorization", "Bearer token-bob"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+    }
+
+    @Test
+    void addTag_withoutAuthorizationHeader_returns401AndNeverCallsUserService() throws Exception {
+        mockMvc.perform(post("/api/recipes/{id}/tags/{tag}", 1, "AIR_FRYER"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(userServiceClient);
+    }
+
+    @Test
+    void removeTag_byAuthor_returns200WithUpdatedTags() throws Exception {
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+
+        String created = mockMvc.perform(post("/api/recipes")
+                        .header("Authorization", "Bearer token-alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleRequest())))
+                .andReturn().getResponse().getContentAsString();
+        Long id = objectMapper.readTree(created).get("id").asLong();
+
+        mockMvc.perform(delete("/api/recipes/{id}/tags/{tag}", id, "VEGETARIEN")
+                        .header("Authorization", "Bearer token-alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags").isEmpty());
+    }
+
+    @Test
+    void removeTag_byNonAuthor_returns403() throws Exception {
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+
+        String created = mockMvc.perform(post("/api/recipes")
+                        .header("Authorization", "Bearer token-alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleRequest())))
+                .andReturn().getResponse().getContentAsString();
+        Long id = objectMapper.readTree(created).get("id").asLong();
+
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(2L, "Bob", "bob@test.com"));
+
+        mockMvc.perform(delete("/api/recipes/{id}/tags/{tag}", id, "VEGETARIEN")
+                        .header("Authorization", "Bearer token-bob"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
     }
 
     @Test

@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -136,5 +137,83 @@ class RecipeServiceImplTest {
         ArgumentCaptor<RecipeEntity> captor = ArgumentCaptor.forClass(RecipeEntity.class);
         verify(recipeRepository).save(captor.capture());
         assertThat(captor.getValue().getTags()).containsExactly(Tag.AIR_FRYER);
+    }
+
+    @Test
+    void addTag_byAuthor_addsTagOnce() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5,
+                "s", new ArrayList<>(List.of(Tag.VEGETARIEN)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+        when(recipeRepository.save(any(RecipeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecipeDto result = recipeService.addTag(10L, Tag.AIR_FRYER, AUTH_HEADER);
+
+        assertThat(result.tags()).containsExactlyInAnyOrder(Tag.VEGETARIEN, Tag.AIR_FRYER);
+    }
+
+    @Test
+    void addTag_whenAlreadyPresent_doesNotDuplicate() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5,
+                "s", new ArrayList<>(List.of(Tag.VEGETARIEN)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+        when(recipeRepository.save(any(RecipeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecipeDto result = recipeService.addTag(10L, Tag.VEGETARIEN, AUTH_HEADER);
+
+        assertThat(result.tags()).containsExactly(Tag.VEGETARIEN);
+    }
+
+    @Test
+    void addTag_byNonAuthor_throwsForbiddenAndNeverSaves() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5,
+                "s", new ArrayList<>(List.of(Tag.VEGETARIEN)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(2L, "Bob", "bob@test.com"));
+
+        assertThatThrownBy(() -> recipeService.addTag(10L, Tag.AIR_FRYER, AUTH_HEADER))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(recipeRepository, never()).save(any(RecipeEntity.class));
+    }
+
+    @Test
+    void removeTag_byAuthor_removesTag() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5, "s",
+                new ArrayList<>(List.of(Tag.VEGETARIEN, Tag.AIR_FRYER)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+        when(recipeRepository.save(any(RecipeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecipeDto result = recipeService.removeTag(10L, Tag.AIR_FRYER, AUTH_HEADER);
+
+        assertThat(result.tags()).containsExactly(Tag.VEGETARIEN);
+    }
+
+    @Test
+    void removeTag_whenNotPresent_isNoOp() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5,
+                "s", new ArrayList<>(List.of(Tag.VEGETARIEN)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+        when(recipeRepository.save(any(RecipeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecipeDto result = recipeService.removeTag(10L, Tag.AIR_FRYER, AUTH_HEADER);
+
+        assertThat(result.tags()).containsExactly(Tag.VEGETARIEN);
+    }
+
+    @Test
+    void removeTag_byNonAuthor_throwsForbiddenAndNeverSaves() {
+        RecipeEntity existing = new RecipeEntity("Titre", List.of("x"), 1, 5, "p", "c", 5,
+                "s", new ArrayList<>(List.of(Tag.VEGETARIEN)), 1L, "Alice");
+        when(recipeRepository.findById(10L)).thenReturn(Optional.of(existing));
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(2L, "Bob", "bob@test.com"));
+
+        assertThatThrownBy(() -> recipeService.removeTag(10L, Tag.VEGETARIEN, AUTH_HEADER))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(recipeRepository, never()).save(any(RecipeEntity.class));
     }
 }
