@@ -1,5 +1,6 @@
 package com.foodies.recipe.service;
 
+import com.foodies.recipe.entite.Tag;
 import com.foodies.recipe.modele.RecipeDto;
 import com.foodies.recipe.modele.RecipeRequest;
 
@@ -14,4 +15,6 @@ public interface RecipeService {
     RecipeDto create(RecipeRequest request, String authorizationHeader);
 
     RecipeDto update(Long id, RecipeRequest request, String authorizationHeader);
+
+    RecipeDto createFromAdoc(String adocContent, List<Tag> tags, String authorizationHeader);
 }

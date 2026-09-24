@@ -3,9 +3,11 @@ package com.foodies.recipe.service.impl;
 import com.foodies.recipe.client.UserDto;
 import com.foodies.recipe.client.UserServiceClient;
 import com.foodies.recipe.entite.RecipeEntity;
+import com.foodies.recipe.entite.Tag;
 import com.foodies.recipe.modele.RecipeDto;
 import com.foodies.recipe.modele.RecipeRequest;
 import com.foodies.recipe.repository.RecipeRepository;
+import com.foodies.recipe.service.AdocRecipeParser;
 import com.foodies.recipe.service.ForbiddenException;
 import com.foodies.recipe.service.RecipeService;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,13 @@ public class RecipeServiceImpl implements RecipeService {
 
     private final RecipeRepository recipeRepository;
     private final UserServiceClient userServiceClient;
+    private final AdocRecipeParser adocRecipeParser;
 
-    public RecipeServiceImpl(RecipeRepository recipeRepository, UserServiceClient userServiceClient) {
+    public RecipeServiceImpl(RecipeRepository recipeRepository, UserServiceClient userServiceClient,
+                              AdocRecipeParser adocRecipeParser) {
         this.recipeRepository = recipeRepository;
         this.userServiceClient = userServiceClient;
+        this.adocRecipeParser = adocRecipeParser;
     }
 
     @Override
@@ -81,6 +86,22 @@ public class RecipeServiceImpl implements RecipeService {
         entity.setAuthorName(caller.name());
 
         return toDto(recipeRepository.save(entity));
+    }
+
+    @Override
+    public RecipeDto createFromAdoc(String adocContent, List<Tag> tags, String authorizationHeader) {
+        RecipeRequest parsed = adocRecipeParser.parse(adocContent);
+        RecipeRequest withTags = new RecipeRequest(
+                parsed.title(),
+                parsed.ingredients(),
+                parsed.serving(),
+                parsed.preparationTime(),
+                parsed.preparationStep(),
+                parsed.cookingStep(),
+                parsed.cookingTime(),
+                parsed.sideDish(),
+                tags != null ? tags : List.of());
+        return create(withTags, authorizationHeader);
     }
 
     private RecipeDto toDto(RecipeEntity entity) {

@@ -13,14 +13,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,6 +42,37 @@ class RecipeControllerIT {
 
     @MockBean
     private UserServiceClient userServiceClient;
+
+    private static final String VALID_ADOC = """
+            =  Boulettes de bœuf sauce tomate
+            :toc:
+            :toclevels: 2
+
+            == Boulettes de bœuf sauce tomate
+
+            Temps de préparation:: 20 min
+            Temps de cuisson:: 20 min
+            Portions:: 4
+
+            === Ingrédients
+
+            * 500 g de bœuf haché
+            * 1 œuf
+
+            === Préparation
+
+            . Mélanger le bœuf, l'œuf, la chapelure, le sel et le poivre.
+
+            === Cuisson
+
+            . Faire revenir l'oignon dans une poêle.
+
+            === Accompagnement
+
+            * Riz
+            * Pâtes
+            * Semoule
+            """;
 
     private RecipeRequest sampleRequest() {
         return new RecipeRequest(
@@ -134,5 +168,46 @@ class RecipeControllerIT {
                         .content(objectMapper.writeValueAsString(updated)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Curry de légumes (v2)"));
+    }
+
+    @Test
+    void importFromAdoc_withValidFileAndAuthorization_returns201WithMappedFields() throws Exception {
+        when(userServiceClient.getCurrentUser(anyString())).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "recipe.adoc", "text/plain", VALID_ADOC.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/recipes/import")
+                        .file(file)
+                        .param("tags", "VEGETARIEN")
+                        .header("Authorization", "Bearer token-alice"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Boulettes de bœuf sauce tomate"))
+                .andExpect(jsonPath("$.sideDish").value("Riz,Pâtes,Semoule"))
+                .andExpect(jsonPath("$.tags[0]").value("VEGETARIEN"))
+                .andExpect(jsonPath("$.authorId").value(1));
+    }
+
+    @Test
+    void importFromAdoc_withMalformedFile_returns400() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "broken.adoc", "text/plain", "not a valid adoc recipe".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/recipes/import")
+                        .file(file)
+                        .header("Authorization", "Bearer token-alice"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void importFromAdoc_withoutAuthorizationHeader_returns401AndNeverCallsUserService() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "recipe.adoc", "text/plain", VALID_ADOC.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/recipes/import").file(file))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(userServiceClient);
     }
 }

@@ -3,6 +3,7 @@ package com.foodies.recipe.controller;
 import com.foodies.recipe.client.UserAuthenticationException;
 import com.foodies.recipe.client.UserServiceUnavailableException;
 import com.foodies.recipe.modele.ErrorResponse;
+import com.foodies.recipe.service.AdocParsingException;
 import com.foodies.recipe.service.ForbiddenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,5 +37,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("SERVICE_UNAVAILABLE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AdocParsingException.class)
+    public ResponseEntity<ErrorResponse> handleAdocParsing(AdocParsingException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("VALIDATION_ERROR", ex.getMessage()));
     }
 }

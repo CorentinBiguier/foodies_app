@@ -11,6 +11,7 @@ import com.foodies.recipe.service.impl.RecipeServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -36,11 +37,14 @@ class RecipeServiceImplTest {
     @Mock
     private UserServiceClient userServiceClient;
 
+    @Mock
+    private AdocRecipeParser adocRecipeParser;
+
     private RecipeService recipeService;
 
     @BeforeEach
     void setUp() {
-        recipeService = new RecipeServiceImpl(recipeRepository, userServiceClient);
+        recipeService = new RecipeServiceImpl(recipeRepository, userServiceClient, adocRecipeParser);
     }
 
     private RecipeRequest sampleRequest() {
@@ -114,5 +118,23 @@ class RecipeServiceImplTest {
                 .isInstanceOf(ForbiddenException.class);
 
         verify(recipeRepository, never()).save(any(RecipeEntity.class));
+    }
+
+    @Test
+    void createFromAdoc_mergesCallerSuppliedTagsAndDelegatesToCreate() {
+        RecipeRequest parsed = new RecipeRequest(
+                "Boulettes", List.of("Bœuf haché"), 4, 20, "prep", "cook", 20, "Riz", List.of());
+        when(adocRecipeParser.parse("adoc-content")).thenReturn(parsed);
+        when(userServiceClient.getCurrentUser(AUTH_HEADER)).thenReturn(new UserDto(1L, "Alice", "alice@test.com"));
+        when(recipeRepository.save(any(RecipeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecipeDto result = recipeService.createFromAdoc("adoc-content", List.of(Tag.AIR_FRYER), AUTH_HEADER);
+
+        assertThat(result.tags()).containsExactly(Tag.AIR_FRYER);
+        assertThat(result.title()).isEqualTo("Boulettes");
+
+        ArgumentCaptor<RecipeEntity> captor = ArgumentCaptor.forClass(RecipeEntity.class);
+        verify(recipeRepository).save(captor.capture());
+        assertThat(captor.getValue().getTags()).containsExactly(Tag.AIR_FRYER);
     }
 }
